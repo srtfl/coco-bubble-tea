@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
@@ -10,71 +10,110 @@ function OrderOnlineSection() {
     updateQuantity,
     clearCart,
     calculateTotal,
-    calculatePromoDiscount
+    promotionDiscount,
   } = useCart();
 
   const navigate = useNavigate();
 
-  const promoDiscount = calculatePromoDiscount();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+
+    // ✅ If user returned without finishing Stripe checkout
+    if (sessionStorage.getItem('checkoutInProgress') === 'true') {
+      alert("It looks like you didn't finish your payment. You can try again below.");
+      sessionStorage.removeItem('checkoutInProgress');
+    }
+  }, []);
+
+  const handleCheckout = async () => {
+    try {
+      const amount = Math.round(calculateTotal(true) * 100); // final price in pence
+
+      // ✅ Set checkout flag before leaving
+      sessionStorage.setItem('checkoutInProgress', 'true');
+
+      const response = await fetch('/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Checkout failed: No URL returned.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('An error occurred while processing your checkout.');
+    }
+  };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 p-8 min-h-screen bg-gray-900 text-white">
-      {/* Left side - Cart Items */}
+    <div className="flex flex-col md:flex-row gap-8 p-8 pt-24 min-h-screen bg-white relative">
+      {/* Left - Cart Items */}
       <div className="flex-1">
-        <h2 className="text-3xl font-bold mb-6">Your Order</h2>
+        <div className="relative inline-block mb-6">
+          <h2 className="text-5xl font-bold text-black uppercase">Your Order</h2>
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 border-t-2 border-coco-orange w-1/2"></div>
+        </div>
 
         {cartItems.length === 0 ? (
-          <div className="text-gray-400">
-            Your basket is empty. 
-            <button 
+          <div className="text-coco-gray text-2xl mt-12">
+            Your basket is empty.
+            <button
               onClick={() => navigate('/menu')}
-              className="text-yellow-400 hover:underline ml-2"
+              className="text-coco-yellow hover:underline ml-2"
             >
               Browse Menu
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {cartItems.map((item) => (
-              <div key={item.name + item.size} className="flex justify-between items-center bg-gray-800 p-4 rounded-md">
+              <div
+                key={`${item.name}-${item.size}`}
+                className="flex justify-between items-center bg-gray-100 p-6 rounded-lg shadow-md"
+              >
                 <div>
-                  <p className="font-semibold">{item.title} ({item.size.toUpperCase()})</p>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <button
-                      onClick={() => updateQuantity(item, item.quantity - 1)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white rounded px-2"
-                      disabled={item.quantity <= 1}
-                    >
-                      -
-                    </button>
-                    <span>{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item, item.quantity + 1)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white rounded px-2"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <p className="font-semibold text-black text-lg">
+                    {item.name} ({item.size.toUpperCase()})
+                  </p>
+                  <p className="text-sm text-coco-gray">Qty: {item.quantity}</p>
                 </div>
 
-                <div className="flex flex-col items-end">
-                  <p className="font-semibold text-lg">
-                    £{(item.price * item.quantity).toFixed(2)}
-                  </p>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => updateQuantity(item, item.quantity - 1)}
+                    className="bg-gray-300 hover:bg-gray-400 text-black rounded-full w-8 h-8 flex items-center justify-center"
+                    disabled={item.quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black font-semibold shadow-inner">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => updateQuantity(item, item.quantity + 1)}
+                    className="bg-gray-300 hover:bg-gray-400 text-black rounded-full w-8 h-8 flex items-center justify-center"
+                  >
+                    +
+                  </button>
+
                   <button
                     onClick={() => removeFromCart(item)}
-                    className="text-red-500 hover:text-red-400 mt-2"
+                    className="text-red-500 hover:text-red-600"
                   >
                     <TrashIcon className="h-5 w-5" />
                   </button>
                 </div>
               </div>
             ))}
-
-            {/* Clear Basket Button */}
             <button
               onClick={clearCart}
-              className="mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+              className="mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full"
             >
               Clear Basket
             </button>
@@ -82,37 +121,42 @@ function OrderOnlineSection() {
         )}
       </div>
 
-      {/* Right side - Order Summary */}
-      <div className="w-full md:w-1/3">
-        <h2 className="text-3xl font-bold mb-6">Order Summary</h2>
+      {/* Right - Summary */}
+      <div className="w-full md:w-2/5">
+        <div className="relative inline-block mb-6">
+          <h2 className="text-5xl font-bold text-black uppercase">Order Summary</h2>
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 border-t-2 border-coco-orange w-1/2"></div>
+        </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-between">
+        <div className="space-y-4 bg-gray-100 p-8 rounded-lg shadow-md">
+          <div className="flex justify-between text-black">
             <span>Subtotal:</span>
             <span>£{calculateTotal(false).toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-green-400 text-sm">
-            <span>Promotion Discount:</span>
-            <span>-£{promoDiscount.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between font-bold text-xl border-t border-gray-700 pt-2">
+          {promotionDiscount > 0 && (
+            <div className="flex justify-between text-green-500 text-sm">
+              <span>Promotion Discount:</span>
+              <span>-£{promotionDiscount.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold text-xl border-t border-gray-300 pt-4 text-black">
             <span>Total:</span>
             <span>£{calculateTotal(true).toFixed(2)}</span>
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="mt-8 flex flex-col gap-4">
           <button
             onClick={() => navigate('/menu')}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded"
+            className="bg-gray-200 hover:bg-gray-300 text-black font-bold py-3 px-6 rounded-full"
           >
             Continue Shopping
           </button>
 
           {cartItems.length > 0 && (
             <button
-              className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded"
+              onClick={handleCheckout}
+              className="bg-coco-yellow hover:bg-coco-orange text-black font-bold py-3 px-6 rounded-full"
             >
               Place Order
             </button>

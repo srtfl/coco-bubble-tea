@@ -12,10 +12,10 @@ function BasketSummary() {
   const discount = calculatePromoDiscount();
 
   return (
-    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+    <div className="fixed bottom-4 right-4 z-50">
       <div className="bg-yellow-400 text-gray-900 rounded-full px-6 py-3 shadow-lg flex items-center space-x-4">
         <span className="font-bold text-lg">
-          Subtotal: £{subtotal.toFixed(2)}
+          View Basket ({cartItems.length} items) - £{(subtotal - discount).toFixed(2)}
           {discount > 0 && (
             <span className="text-sm text-green-700 ml-2">(Saved £{discount.toFixed(2)})</span>
           )}

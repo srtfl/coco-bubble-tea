@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { saveProduct } from '../services/firebaseService'; // Make sure saveProduct exists!
+import { saveProduct } from '../services/firebaseService';
 
 function ProductForm({ product = {}, onDone, onCancel }) {
-  const [title, setTitle] = useState(product.title || '');
+  const [name, setName] = useState(product.name || '');
   const [category, setCategory] = useState(product.category || '');
-  const [regularPrice, setRegularPrice] = useState(product.regularPrice || '');
-  const [largePrice, setLargePrice] = useState(product.largePrice || '');
-  const [imageUrl, setImageUrl] = useState(product.imageUrl || '');
+  const [priceReg, setPriceReg] = useState(product.priceReg || '');
+  const [priceLrg, setPriceLrg] = useState(product.priceLrg || '');
+  const [image, setImage] = useState(product.image || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -17,48 +17,49 @@ function ProductForm({ product = {}, onDone, onCancel }) {
 
     try {
       const productData = {
-        title,
+        name,
         category,
-        regularPrice: parseFloat(regularPrice),
-        largePrice: parseFloat(largePrice),
-        imageUrl,
+        priceReg: parseFloat(priceReg),
+        priceLrg: parseFloat(priceLrg),
+        image,
       };
 
-      await saveProduct(product.id, productData);
-
-      onDone(); // ✅ Close modal + Refresh
+      await saveProduct(product.id, productData); // Will create or update
+      onDone();
     } catch (err) {
-      console.error('Failed to save product', err);
-      setError('Failed to save product.');
+      console.error('Save failed', err);
+      setError('Something went wrong. Try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6 text-sm">
       {error && <p className="text-red-500">{error}</p>}
 
+      {/* Name */}
       <div>
-        <label className="block text-sm mb-1">Product Name</label>
+        <label className="block font-medium mb-1">Product Name</label>
         <input
           type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           className="w-full px-3 py-2 rounded bg-gray-700 text-white"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
           required
         />
       </div>
 
+      {/* Category */}
       <div>
-        <label className="block text-sm mb-1">Category</label>
+        <label className="block font-medium mb-1">Category</label>
         <select
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
           required
         >
-          <option value="">Select Category</option>
+          <option value="">Select category</option>
           <option value="milk-teas">Milk Teas</option>
           <option value="fruit-teas">Fruit Teas</option>
           <option value="special-teas">Special Teas</option>
@@ -69,55 +70,64 @@ function ProductForm({ product = {}, onDone, onCancel }) {
         </select>
       </div>
 
+      {/* Prices */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm mb-1">Regular Price (£)</label>
+          <label className="block font-medium mb-1">Regular Price (£)</label>
           <input
             type="number"
+            step="0.01"
+            value={priceReg}
+            onChange={(e) => setPriceReg(e.target.value)}
             className="w-full px-3 py-2 rounded bg-gray-700 text-white"
-            value={regularPrice}
-            onChange={(e) => setRegularPrice(e.target.value)}
             required
-            min="0"
           />
         </div>
-
         <div>
-          <label className="block text-sm mb-1">Large Price (£)</label>
+          <label className="block font-medium mb-1">Large Price (£)</label>
           <input
             type="number"
+            step="0.01"
+            value={priceLrg}
+            onChange={(e) => setPriceLrg(e.target.value)}
             className="w-full px-3 py-2 rounded bg-gray-700 text-white"
-            value={largePrice}
-            onChange={(e) => setLargePrice(e.target.value)}
             required
-            min="0"
           />
         </div>
       </div>
 
+      {/* Image URL & Preview */}
       <div>
-        <label className="block text-sm mb-1">Image URL</label>
+        <label className="block font-medium mb-1">Image URL</label>
         <input
           type="text"
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
+          value={image}
+          onChange={(e) => setImage(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-gray-700 text-white mb-2"
         />
+        {image && (
+          <img
+            src={image}
+            alt="Preview"
+            className="w-32 h-32 object-contain rounded border mx-auto"
+            onError={(e) => (e.target.src = 'https://via.placeholder.com/150')}
+          />
+        )}
       </div>
 
+      {/* Buttons */}
       <div className="flex justify-between pt-4">
         <button
           type="button"
-          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
           onClick={onCancel}
+          className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded"
         >
           Cancel
         </button>
-
         <button
           type="submit"
           disabled={loading}
-          className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+          className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
         >
           {loading ? 'Saving...' : 'Save'}
         </button>

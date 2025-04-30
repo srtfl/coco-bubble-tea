@@ -9,9 +9,19 @@ export function useCart() {
 }
 
 export function CartProvider({ children }) {
-  const [cartItems, setCartItems] = useState([]);
+  // ✅ Load from localStorage on first load
+  const [cartItems, setCartItems] = useState(() => {
+    const savedCart = localStorage.getItem('cartItems');
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+
   const [promotions, setPromotions] = useState([]);
   const [promotionDiscount, setPromotionDiscount] = useState(0);
+
+  // ✅ Sync to localStorage when cart changes
+  useEffect(() => {
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+  }, [cartItems]);
 
   useEffect(() => {
     const promotionsCollection = collection(db, 'promotions');
@@ -38,7 +48,11 @@ export function CartProvider({ children }) {
       if (existingIndex !== -1) {
         updated[existingIndex].quantity += item.quantity;
       } else {
-        updated.push({ ...item, promotion: promotion || null });
+        updated.push({
+          ...item,
+          name: item.name || item.title || 'Unknown Item',
+          promotion: promotion || null,
+        });
       }
       return updated;
     });
@@ -81,6 +95,7 @@ export function CartProvider({ children }) {
 
   const clearCart = () => {
     setCartItems([]);
+    localStorage.removeItem('cartItems'); // ✅ Clear localStorage too
   };
 
   const getSubtotal = () => {
@@ -88,19 +103,127 @@ export function CartProvider({ children }) {
   };
 
   const calculatePromoDiscount = () => {
-    let discount = 0;
+    let totalDiscount = 0;
+    let totalPromoPrice = 0;
+    let totalRegularPrice = 0;
+
+    const promoGroups = {};
+
     cartItems.forEach((item) => {
       if (item.promotion) {
-        discount += (item.price * item.quantity) - (item.promotion.price * item.quantity);
+        const key = `${item.category}-${item.size}`;
+        if (!promoGroups[key]) {
+          promoGroups[key] = {
+            promotion: item.promotion,
+            totalQuantity: 0,
+            items: [],
+          };
+        }
+        promoGroups[key].totalQuantity += item.quantity;
+        promoGroups[key].items.push(item);
       }
     });
-    return Number.isFinite(discount) ? discount : 0;
+
+    Object.values(promoGroups).forEach((group) => {
+      const { promotion, totalQuantity, items } = group;
+      const requiredQuantity = promotion.requiredQuantity || 1;
+      const promoPrice = promotion.size === 'reg' ? promotion.priceReg : promotion.priceLrg;
+
+      const qualifyingSets = Math.floor(totalQuantity / requiredQuantity);
+      if (qualifyingSets > 0) {
+        const qualifyingItemsQuantity = qualifyingSets * requiredQuantity;
+        let regularPriceForQualifyingItems = 0;
+
+        let remainingQuantity = qualifyingItemsQuantity;
+        for (const item of items) {
+          if (remainingQuantity <= 0) break;
+          const quantityToUse = Math.min(item.quantity, remainingQuantity);
+          regularPriceForQualifyingItems += quantityToUse * item.price;
+          remainingQuantity -= quantityToUse;
+        }
+
+        const promoPriceForQualifyingSets = qualifyingSets * promoPrice;
+        totalPromoPrice += promoPriceForQualifyingSets;
+        totalRegularPrice += regularPriceForQualifyingItems;
+
+        const discount = regularPriceForQualifyingItems - promoPriceForQualifyingSets;
+        totalDiscount += discount > 0 ? discount : 0;
+      }
+    });
+
+    if (totalPromoPrice > totalRegularPrice) {
+      totalDiscount = 0;
+    }
+
+    return Number.isFinite(totalDiscount) ? totalDiscount : 0;
   };
 
-  const calculateTotal = (includeDiscount = true) => {
-    const subtotal = getSubtotal();
+  const calculatePromoTotal = () => {
+    let totalPromoPrice = 0;
+
+    const promoGroups = {};
+
+    cartItems.forEach((item) => {
+      if (item.promotion) {
+        const key = `${item.category}-${item.size}`;
+        if (!promoGroups[key]) {
+          promoGroups[key] = {
+            promotion: item.promotion,
+            totalQuantity: 0,
+            items: [],
+          };
+        }
+        promoGroups[key].totalQuantity += item.quantity;
+        promoGroups[key].items.push(item);
+      }
+    });
+
+    Object.values(promoGroups).forEach((group) => {
+      const { promotion, totalQuantity, items } = group;
+      const requiredQuantity = promotion.requiredQuantity || 1;
+      const promoPrice = promotion.size === 'reg' ? promotion.priceReg : promotion.priceLrg;
+
+      const qualifyingSets = Math.floor(totalQuantity / requiredQuantity);
+      if (qualifyingSets > 0) {
+        const promoPriceForQualifyingSets = qualifyingSets * promoPrice;
+        totalPromoPrice += promoPriceForQualifyingSets;
+
+        const remainingItems = totalQuantity % requiredQuantity;
+        if (remainingItems > 0) {
+          let remainingQuantity = remainingItems;
+          for (const item of items) {
+            if (remainingQuantity <= 0) break;
+            const quantityToUse = Math.min(item.quantity, remainingQuantity);
+            totalPromoPrice += quantityToUse * item.price;
+            remainingQuantity -= quantityToUse;
+          }
+        }
+      } else {
+        for (const item of items) {
+          totalPromoPrice += item.price * item.quantity;
+        }
+      }
+    });
+
+    cartItems.forEach((item) => {
+      if (!item.promotion) {
+        totalPromoPrice += item.price * item.quantity;
+      }
+    });
+
+    return Number.isFinite(totalPromoPrice) ? totalPromoPrice : 0;
+  };
+
+  useEffect(() => {
     const discount = calculatePromoDiscount();
-    return includeDiscount ? subtotal - discount : subtotal;
+    setPromotionDiscount(discount);
+  }, [cartItems, promotions]);
+
+  const calculateTotal = (includeDiscount = true) => {
+    if (includeDiscount) {
+      return calculatePromoTotal();
+    }
+    return getSubtotal();
   };
 
   const getTotalItems = () => {
@@ -122,6 +245,7 @@ export function CartProvider({ children }) {
         calculateTotal,
         getTotalItems,
         promotions,
+        promotionDiscount,
       }}
     >
       {children}

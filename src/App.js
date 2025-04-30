@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Routes, Route, Navigate } from 'react-router-dom';
-
 import { auth } from './firebase';
 
+import ScrollToTop from './components/ScrollToTop';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import MenuSection from './components/MenuSection';
@@ -14,6 +14,8 @@ import Login from './components/Login';
 import AdminPanel from './components/AdminPanel';
 import FloatingOrderButton from './components/FloatingOrderButton';
 import Footer from './components/Footer';
+import SuccessPage from './components/SuccessPage';
+import CancelPage from './components/CancelPage';
 
 const AuthContext = createContext();
 
@@ -56,6 +58,7 @@ function App() {
     <AuthContext.Provider value={{ user, isAdmin }}>
       <div className="font-inter font-sans bg-gray-900 text-white min-h-screen flex flex-col">
         <Header />
+        <ScrollToTop /> {/* 👈 Add this here */}
 
         <main className="flex-grow">
           <Routes>
@@ -65,14 +68,19 @@ function App() {
             <Route path="/order-online" element={<OrderOnlineSection />} />
             <Route path="/about" element={<AboutSection />} />
             <Route path="/contact" element={<ContactSection />} />
+            <Route path="/success" element={<SuccessPage />} />
+            <Route path="/cancel" element={<CancelPage />} />
 
             {/* Authentication Pages */}
             <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={
-              <ProtectedRoute>
-                <AdminPanel />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

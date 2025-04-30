@@ -1,8 +1,15 @@
-/** @type {import('tailwindcss').Config} */
-export default {
-  content: ["./src/**/*.{js,jsx,ts,tsx}"], // VERY IMPORTANT
+// tailwind.config.js
+module.exports = {
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'coco-yellow': '#FBBF24',
+        'coco-orange': '#FF6B00',
+        'coco-gray': '#666666',
+      },
+    },
   },
+  
   plugins: [],
-}
+};

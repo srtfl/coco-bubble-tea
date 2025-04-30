@@ -1,29 +1,31 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // ✅ Correct import
+import { useNavigate } from 'react-router-dom';
 
 function HeroSection() {
-  const navigate = useNavigate(); // ✅ Correct hook
+  const navigate = useNavigate();
 
   return (
     <section
-      className="relative w-full h-screen bg-cover bg-center flex flex-col justify-center items-center text-white"
+      className="relative w-full h-[600px] bg-cover bg-center flex flex-col justify-center items-center text-white"
       style={{
         backgroundImage: "url('/images/hero-bubble-tea.jpg')",
       }}
     >
+      <div className="absolute inset-0 bg-black/40"></div>
+
       {/* Main Hero Content */}
-      <div className="text-center px-4">
-        <h1 className="text-5xl md:text-6xl font-bold mb-4 drop-shadow-lg">
-          Welcome to Coco's Bubble Tea!
+      <div className="relative text-center px-4">
+        <h1 className="text-5xl md:text-6xl font-bold mb-4 drop-shadow-lg uppercase">
+          Spark Up Every Moment!
         </h1>
-        <p className="text-xl mb-6 drop-shadow-md">
+        <p className="text-xl mb-8 drop-shadow-md max-w-2xl">
           Sip the Fun – Dive into Deliciousness!
         </p>
         <button
-          onClick={() => navigate('/menu')} // ✅ navigate to /menu route
-          className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-6 rounded-full transition duration-300 cursor-pointer"
+          onClick={() => navigate('/menu')}
+          className="bg-coco-yellow hover:bg-coco-orange text-black font-bold py-3 px-8 rounded-full shadow-lg transition-colors"
         >
-          Explore Our Menu
+          Order Now
         </button>
       </div>
     </section>
