@@ -32,11 +32,11 @@ function OrderOnlineSection() {
       // ✅ Set checkout flag before leaving
       sessionStorage.setItem('checkoutInProgress', 'true');
 
-      const response = await fetch('/create-checkout-session', {
+      const response = await fetch('https://coco-bubble-tea-backend.onrender.com/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount }),
-      });
+      });      
 
       const data = await response.json();
 
