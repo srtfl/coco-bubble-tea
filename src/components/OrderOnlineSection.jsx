@@ -28,18 +28,22 @@ function OrderOnlineSection() {
   const handleCheckout = async () => {
     try {
       const amount = Math.round(calculateTotal(true) * 100); // final price in pence
-
+  
       // ✅ Set checkout flag before leaving
       sessionStorage.setItem('checkoutInProgress', 'true');
-
+  
       const response = await fetch('https://coco-bubble-tea-backend.onrender.com/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount }),
-      });      
-
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+  
       const data = await response.json();
-
+  
       if (data.url) {
         window.location.href = data.url;
       } else {
@@ -50,6 +54,7 @@ function OrderOnlineSection() {
       alert('An error occurred while processing your checkout.');
     }
   };
+  
 
   return (
     <div className="flex flex-col md:flex-row gap-8 p-8 pt-24 min-h-screen bg-white relative">
