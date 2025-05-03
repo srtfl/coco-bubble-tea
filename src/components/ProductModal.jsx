@@ -1,107 +1,113 @@
-import React, { useState } from 'react';
-import { useCart } from '../contexts/CartContext';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect } from 'react';
+import { saveProduct, getCategories } from '../services/firebaseService';
 
-function ProductModal({ product, onClose, onAddToCart }) {
-  const { addToCart } = useCart();
-  const [size, setSize] = useState('reg'); // Default to regular
-  const [quantity, setQuantity] = useState(1);
+function ProductModal({ product = {}, onDone, onCancel }) {
+  const [name, setName] = useState(product.name || '');
+  const [category, setCategory] = useState(product.category || '');
+  const [priceReg, setPriceReg] = useState(product.priceReg || '');
+  const [priceLrg, setPriceLrg] = useState(product.priceLrg || '');
+  const [image, setImage] = useState(product.image || '');
+  const [categories, setCategories] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Define prices based on size (adjust these values based on your data)
-  const prices = {
-    reg: product?.price || 4.99, // Default price for regular
-    lrg: (product?.price || 4.99) + 1, // Large is £1 more
+  useEffect(() => {
+    getCategories().then(setCategories);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await saveProduct(product.id, {
+        name,
+        category,
+        priceReg: parseFloat(priceReg),
+        priceLrg: parseFloat(priceLrg),
+        image,
+      });
+      onDone();
+    } catch (err) {
+      console.error('Error saving product:', err);
+      setError('Failed to save product.');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const handleAddToCart = () => {
-    const itemToAdd = {
-      ...product,
-      size,
-      price: prices[size], // Add the price based on selected size
-      quantity,
-    };
-    addToCart(itemToAdd);
-    // Pass the item details back to the parent component
-    onAddToCart(itemToAdd);
-    onClose();
-  };
-
-  if (!product) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
-        >
-          <XMarkIcon className="w-6 h-6" />
-        </button>
+    <form onSubmit={handleSubmit} className="space-y-4 text-sm text-white">
+      {error && <p className="text-red-500">{error}</p>}
 
-        <div className="flex flex-col items-center">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-32 h-32 object-cover mb-6"
-          />
-          <h2 className="text-2xl font-bold text-black mb-2">{product.name}</h2>
-          <p className="text-sm text-gray-600 mb-6">{product.description || 'No description available'}</p>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Product Name"
+        className="w-full px-3 py-2 rounded bg-gray-700"
+        required
+      />
 
-          {/* Size selection */}
-          <div className="flex space-x-4 mb-6">
-            <button
-              className={`py-2 px-4 rounded-full border ${
-                size === 'reg' ? 'bg-coco-yellow text-black' : 'border-gray-300'
-              }`}
-              onClick={() => setSize('reg')}
-            >
-              Regular (£{prices.reg.toFixed(2)})
-            </button>
-            <button
-              className={`py-2 px-4 rounded-full border ${
-                size === 'lrg' ? 'bg-coco-yellow text-black' : 'border-gray-300'
-              }`}
-              onClick={() => setSize('lrg')}
-            >
-              Large (£{prices.lrg.toFixed(2)})
-            </button>
-          </div>
+      <select
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        className="w-full px-3 py-2 rounded bg-gray-700"
+        required
+      >
+        <option value="">Select category</option>
+        {categories.map((cat) => (
+          <option key={cat} value={cat}>
+            {cat}
+          </option>
+        ))}
+      </select>
 
-          {/* Quantity selection */}
-          <div className="flex items-center mb-8">
-            <button
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-full"
-            >
-              -
-            </button>
-            <span className="px-6 py-2 bg-gray-100 text-black font-semibold">{quantity}</span>
-            <button
-              onClick={() => setQuantity(quantity + 1)}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-full"
-            >
-              +
-            </button>
-          </div>
-
-          {/* Confirm button */}
-          <button
-            onClick={handleAddToCart}
-            className="w-full bg-coco-yellow hover:bg-coco-orange text-black font-bold py-3 rounded-full mb-4"
-          >
-            Add {quantity} to Basket
-          </button>
-
-          {/* Cancel button */}
-          <button
-            onClick={onClose}
-            className="text-gray-600 hover:text-gray-800 text-sm"
-          >
-            Cancel
-          </button>
-        </div>
+      <div className="flex gap-4">
+        <input
+          value={priceReg}
+          type="number"
+          step="0.01"
+          onChange={(e) => setPriceReg(e.target.value)}
+          placeholder="Regular Price"
+          className="flex-1 px-3 py-2 rounded bg-gray-700"
+          required
+        />
+        <input
+          value={priceLrg}
+          type="number"
+          step="0.01"
+          onChange={(e) => setPriceLrg(e.target.value)}
+          placeholder="Large Price"
+          className="flex-1 px-3 py-2 rounded bg-gray-700"
+          required
+        />
       </div>
-    </div>
+
+      <input
+        value={image}
+        onChange={(e) => setImage(e.target.value)}
+        placeholder="Image URL"
+        className="w-full px-3 py-2 rounded bg-gray-700"
+      />
+
+      <div className="flex justify-end gap-4 pt-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded"
+        >
+          {loading ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </form>
   );
 }
 

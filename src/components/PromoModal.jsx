@@ -1,47 +1,146 @@
-import React from 'react';
-import { useCart } from '../contexts/CartContext';
+import React, { useState, useEffect } from 'react';
+import { savePromotion, getCategories } from '../services/firebaseService';
 
-function PromoModal() {
-  const { promotions } = useCart();
+function PromoModal({ promotion = {}, onDone, onCancel }) {
+  const [title, setTitle] = useState(promotion.title || '');
+  const [description, setDescription] = useState(promotion.description || '');
+  const [category, setCategory] = useState(promotion.category || '');
+  const [size, setSize] = useState(promotion.size || 'Regular');
+  const [requiredQuantity, setRequiredQuantity] = useState(promotion.requiredQuantity || 2);
+  const [regularPromoPrice, setRegularPromoPrice] = useState(promotion.regularPromoPrice || 0);
+  const [largePromoPrice, setLargePromoPrice] = useState(promotion.largePromoPrice || 0);
+  const [active, setActive] = useState(promotion.active ?? true);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const closeModal = () => {
-    document.getElementById('promo-modal').classList.add('hidden');
+  useEffect(() => {
+    getCategories().then(setCategories);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      await savePromotion(promotion.id, {
+        title,
+        description,
+        category,
+        size,
+        requiredQuantity: Number(requiredQuantity),
+        regularPromoPrice: Number(regularPromoPrice),
+        largePromoPrice: Number(largePromoPrice),
+        active,
+      });
+      onDone();
+    } catch (err) {
+      console.error('Save promo failed:', err);
+      setError('Error saving promotion');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (promotions.length === 0) {
-    return null;
-  }
-
   return (
-    <div
-      id="promo-modal"
-      className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-30 hidden"
-    >
-      <div
-        id="promo-content"
-        className="bg-gray-800 p-6 rounded-lg max-w-md w-full text-center relative"
+    <form onSubmit={handleSubmit} className="space-y-4 text-sm text-white">
+      {error && <p className="text-red-500">{error}</p>}
+
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title"
+        className="w-full px-3 py-2 rounded bg-gray-700"
+        required
+      />
+
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description"
+        className="w-full px-3 py-2 rounded bg-gray-700"
+      />
+
+      <select
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        className="w-full px-3 py-2 rounded bg-gray-700"
+        required
       >
-        <button
-          onClick={closeModal}
-          className="absolute top-2 right-2 text-white text-2xl hover:text-yellow-400"
-        >
-          ✖
-        </button>
-        <h2 className="text-3xl font-bold mb-4 text-yellow-400">Special Promotions!</h2>
-        {promotions.map((promo) => (
-          <p key={promo.id} className="text-lg text-gray-300 mb-4">
-            🎉 {promo.title}: {promo.description} ({promo.size === 'reg' ? 'Regular' : 'Large'}, £{(promo.size === 'reg' ? promo.priceReg : promo.priceLrg).toFixed(2)})
-            🎉
-          </p>
+        <option value="">Select category</option>
+        {categories.map((cat) => (
+          <option key={cat} value={cat}>
+            {cat}
+          </option>
         ))}
+      </select>
+
+      <select
+        value={size}
+        onChange={(e) => setSize(e.target.value)}
+        className="w-full px-3 py-2 rounded bg-gray-700"
+      >
+        <option value="Regular">Regular</option>
+        <option value="Large">Large</option>
+      </select>
+
+      <input
+        type="number"
+        min="1"
+        value={requiredQuantity}
+        onChange={(e) => setRequiredQuantity(e.target.value)}
+        placeholder="Required Quantity"
+        className="w-full px-3 py-2 rounded bg-gray-700"
+        required
+      />
+
+      <input
+        type="number"
+        min="0"
+        value={regularPromoPrice}
+        onChange={(e) => setRegularPromoPrice(e.target.value)}
+        placeholder="Regular Promo Price"
+        className="w-full px-3 py-2 rounded bg-gray-700"
+        required
+      />
+
+      <input
+        type="number"
+        min="0"
+        value={largePromoPrice}
+        onChange={(e) => setLargePromoPrice(e.target.value)}
+        placeholder="Large Promo Price"
+        className="w-full px-3 py-2 rounded bg-gray-700"
+        required
+      />
+
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={active}
+          onChange={(e) => setActive(e.target.checked)}
+        />
+        Active
+      </label>
+
+      <div className="flex justify-end gap-4 pt-4">
         <button
-          onClick={closeModal}
-          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full transition duration-300"
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-500 hover:bg-gray-600 px-4 py-2 rounded"
         >
-          Got it!
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-yellow-400 hover:bg-yellow-500 px-4 py-2 rounded text-black font-bold"
+        >
+          {loading ? 'Saving...' : 'Save Promotion'}
         </button>
       </div>
-    </div>
+    </form>
   );
 }
 

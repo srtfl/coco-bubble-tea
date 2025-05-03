@@ -1,152 +1,159 @@
-import React, { useState } from 'react';
-import { savePromotion } from '../services/firebaseService'; // Make sure savePromotion exists
+import React, { useState, useEffect } from 'react';
+import { getCategories, savePromotion } from '../services/firebaseService';
 
-function PromotionForm({ promotion = {}, onDone }) {
-  const [title, setTitle] = useState(promotion.title || '');
-  const [description, setDescription] = useState(promotion.description || '');
-  const [category, setCategory] = useState(promotion.category || 'milk-teas');
-  const [size, setSize] = useState(promotion.size || 'Regular');
-  const [requiredQuantity, setRequiredQuantity] = useState(promotion.requiredQuantity || 2);
-  const [regularPromoPrice, setRegularPromoPrice] = useState(promotion.regularPromoPrice || 0);
-  const [largePromoPrice, setLargePromoPrice] = useState(promotion.largePromoPrice || 0);
-  const [active, setActive] = useState(promotion.active ?? true);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+function PromotionForm({ promotion, onDone, onCancel }) {
+  const [title, setTitle] = useState(promotion?.title || '');
+  const [description, setDescription] = useState(promotion?.description || '');
+  const [category, setCategory] = useState(promotion?.category || '');
+  const [size, setSize] = useState(promotion?.size || 'reg');
+  const [requiredQuantity, setRequiredQuantity] = useState(promotion?.requiredQuantity || 1);
+  const [priceReg, setPriceReg] = useState(promotion?.priceReg || 0);
+  const [priceLrg, setPriceLrg] = useState(promotion?.priceLrg || 0);
+  const [active, setActive] = useState(promotion?.active ?? true);
+  const [categories, setCategories] = useState([]);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const categoryData = await getCategories();
+        setCategories(categoryData.map(cat => cat.value));
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+        setError('Failed to load categories.');
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
     try {
-      const promoData = {
+      const promotionData = {
+        id: promotion?.id, // Include ID if editing
         title,
         description,
         category,
         size,
-        requiredQuantity: Number(requiredQuantity),
-        regularPromoPrice: Number(regularPromoPrice),
-        largePromoPrice: Number(largePromoPrice),
+        requiredQuantity: parseInt(requiredQuantity),
+        priceReg: parseFloat(priceReg),
+        priceLrg: parseFloat(priceLrg),
         active,
       };
-
-      await savePromotion(promotion.id, promoData);
-
-      onDone(); // Close modal + refresh
+      await savePromotion(promotionData);
+      onDone();
     } catch (err) {
-      console.error('Failed to save promotion', err);
-      setError('Failed to save promotion.');
-    } finally {
-      setLoading(false);
+      console.error('Error saving promotion:', err);
+      setError('Failed to save promotion. Please try again.');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 text-white">
       {error && <p className="text-red-500">{error}</p>}
-
       <div>
-        <label className="block text-sm mb-1">Title</label>
+        <label className="block text-sm font-medium mb-1">Title</label>
         <input
           type="text"
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white"
           required
         />
       </div>
-
       <div>
-        <label className="block text-sm mb-1">Description</label>
-        <textarea
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <input
+          type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white"
+          required
         />
       </div>
-
       <div>
-        <label className="block text-sm mb-1">Category</label>
+        <label className="block text-sm font-medium mb-1">Category</label>
         <select
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white"
+          required
         >
-          <option value="milk-teas">Milk Teas</option>
-          <option value="fruit-teas">Fruit Teas</option>
-          <option value="special-teas">Special Teas</option>
-          <option value="milkshakes">Milkshakes</option>
-          <option value="fruity-twist-shakes">Fruity Twist Shakes</option>
-          <option value="bubble-fruity-sundaes">Bubble Fruity Sundaes</option>
-          <option value="frappes">Frappes</option>
+          <option value="">Select Category</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
         </select>
       </div>
-
       <div>
-        <label className="block text-sm mb-1">Size</label>
+        <label className="block text-sm font-medium mb-1">Size</label>
         <select
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
           value={size}
           onChange={(e) => setSize(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white"
+          required
         >
-          <option value="Regular">Regular</option>
-          <option value="Large">Large</option>
+          <option value="reg">Regular</option>
+          <option value="lrg">Large</option>
         </select>
       </div>
-
       <div>
-        <label className="block text-sm mb-1">Required Quantity</label>
+        <label className="block text-sm font-medium mb-1">Required Quantity</label>
         <input
           type="number"
-          min="1"
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
           value={requiredQuantity}
           onChange={(e) => setRequiredQuantity(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white"
+          min="1"
           required
         />
       </div>
-
       <div>
-        <label className="block text-sm mb-1">Regular Promo Price (£)</label>
+        <label className="block text-sm font-medium mb-1">Regular Promo Price (£)</label>
         <input
           type="number"
-          min="0"
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
-          value={regularPromoPrice}
-          onChange={(e) => setRegularPromoPrice(e.target.value)}
+          step="0.01"
+          value={priceReg}
+          onChange={(e) => setPriceReg(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white"
           required
         />
       </div>
-
       <div>
-        <label className="block text-sm mb-1">Large Promo Price (£)</label>
+        <label className="block text-sm font-medium mb-1">Large Promo Price (£)</label>
         <input
           type="number"
-          min="0"
-          className="w-full px-3 py-2 rounded bg-gray-700 text-white"
-          value={largePromoPrice}
-          onChange={(e) => setLargePromoPrice(e.target.value)}
+          step="0.01"
+          value={priceLrg}
+          onChange={(e) => setPriceLrg(e.target.value)}
+          className="w-full p-2 border rounded bg-gray-700 text-white"
           required
         />
       </div>
-
-      <div className="flex items-center">
+      <label className="flex items-center space-x-2">
         <input
           type="checkbox"
           checked={active}
           onChange={(e) => setActive(e.target.checked)}
-          className="mr-2"
+          className="form-checkbox"
         />
-        <label className="text-sm">Active</label>
+        <span>Active</span>
+      </label>
+      <div className="flex space-x-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 rounded"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="w-full bg-yellow-500 hover:bg-yellow-600 text-black py-2 rounded"
+        >
+          Save Promotion
+        </button>
       </div>
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded"
-      >
-        {loading ? 'Saving...' : 'Save Promotion'}
-      </button>
     </form>
   );
 }

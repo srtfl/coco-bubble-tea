@@ -58,12 +58,19 @@ export function CartProvider({ children }) {
     });
   };
 
-  const removeFromCart = (itemToRemove) => {
-    setCartItems((prevItems) =>
-      prevItems.filter(
-        (item) => !(item.name === itemToRemove.name && item.size === itemToRemove.size)
-      )
-    );
+  const removeFromCart = (itemOrId) => {
+    setCartItems((prevItems) => {
+      if (typeof itemOrId === 'object' && itemOrId.id) {
+        // Remove all items with the given product id
+        return prevItems.filter((item) => item.id !== itemOrId.id);
+      } else if (typeof itemOrId === 'object' && itemOrId.name && itemOrId.size) {
+        // Remove specific item by name and size
+        return prevItems.filter(
+          (item) => !(item.name === itemOrId.name && item.size === itemOrId.size)
+        );
+      }
+      return prevItems; // No change if invalid input
+    });
   };
 
   const increaseQuantity = (index) => {

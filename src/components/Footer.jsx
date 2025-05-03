@@ -67,8 +67,10 @@ function Footer() {
               className="text-gray-800"
               style={{ fontFamily: 'Poppins, sans-serif' }}
             >
-              123 Bubble Tea Lane<br />
-              London, UK<br />
+              Coco's Treats<br />
+              10 Meadow Row,<br />
+              Buckinghams,<br />
+              MK18 1PU<br />
               Email: info@cocobubbletea.com<br />
               Phone: +44 123 456 7890
             </p>
@@ -97,7 +99,7 @@ function Footer() {
         </div>
         <div className="mt-8 text-center text-gray-800">
           <p style={{ fontFamily: 'Poppins, sans-serif' }}>
-            &copy; {new Date().getFullYear()} Coco Bubble Tea. All rights reserved.
+            &copy; {new Date().getFullYear()} Coco's Bubble Tea. All rights reserved.
           </p>
         </div>
       </div>
