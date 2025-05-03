@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -9,7 +9,6 @@ export function useCart() {
 }
 
 export function CartProvider({ children }) {
-  // ✅ Load from localStorage on first load
   const [cartItems, setCartItems] = useState(() => {
     const savedCart = localStorage.getItem('cartItems');
     return savedCart ? JSON.parse(savedCart) : [];
@@ -18,7 +17,6 @@ export function CartProvider({ children }) {
   const [promotions, setPromotions] = useState([]);
   const [promotionDiscount, setPromotionDiscount] = useState(0);
 
-  // ✅ Sync to localStorage when cart changes
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
@@ -61,15 +59,13 @@ export function CartProvider({ children }) {
   const removeFromCart = (itemOrId) => {
     setCartItems((prevItems) => {
       if (typeof itemOrId === 'object' && itemOrId.id) {
-        // Remove all items with the given product id
         return prevItems.filter((item) => item.id !== itemOrId.id);
       } else if (typeof itemOrId === 'object' && itemOrId.name && itemOrId.size) {
-        // Remove specific item by name and size
         return prevItems.filter(
           (item) => !(item.name === itemOrId.name && item.size === itemOrId.size)
         );
       }
-      return prevItems; // No change if invalid input
+      return prevItems;
     });
   };
 
@@ -101,15 +97,17 @@ export function CartProvider({ children }) {
   };
 
   const clearCart = () => {
-    setCartItems([]);
-    localStorage.removeItem('cartItems'); // ✅ Clear localStorage too
+    if (cartItems.length > 0) {
+      setCartItems([]);
+      localStorage.removeItem('cartItems');
+    }
   };
 
   const getSubtotal = () => {
     return cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   };
 
-  const calculatePromoDiscount = () => {
+  const calculatePromoDiscount = useCallback(() => {
     let totalDiscount = 0;
     let totalPromoPrice = 0;
     let totalRegularPrice = 0;
@@ -163,7 +161,7 @@ export function CartProvider({ children }) {
     }
 
     return Number.isFinite(totalDiscount) ? totalDiscount : 0;
-  };
+  }, [cartItems]); // Dependencies for calculatePromoDiscount
 
   const calculatePromoTotal = () => {
     let totalPromoPrice = 0;
@@ -223,8 +221,10 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     const discount = calculatePromoDiscount();
-    setPromotionDiscount(discount);
-  }, [cartItems, promotions]);
+    if (promotionDiscount !== discount) {
+      setPromotionDiscount(discount);
+    }
+  }, [cartItems, promotions, promotionDiscount, calculatePromoDiscount]); // Added calculatePromoDiscount
 
   const calculateTotal = (includeDiscount = true) => {
     if (includeDiscount) {

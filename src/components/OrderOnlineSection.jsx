@@ -2,6 +2,17 @@ import React, { useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+
+// Log the Stripe key for debugging
+console.log('Stripe Publishable Key:', process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+
+// Initialize Stripe with a fallback
+const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+if (!stripeKey) {
+  throw new Error('Stripe publishable key is not defined. Please set REACT_APP_STRIPE_PUBLISHABLE_KEY in your .env file.');
+}
+const stripePromise = loadStripe(stripeKey);
 
 function OrderOnlineSection() {
   const {
@@ -17,44 +28,61 @@ function OrderOnlineSection() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-
-    // ✅ If user returned without finishing Stripe checkout
-    if (sessionStorage.getItem('checkoutInProgress') === 'true') {
-      alert("It looks like you didn't finish your payment. You can try again below.");
-      sessionStorage.removeItem('checkoutInProgress');
-    }
   }, []);
 
   const handleCheckout = async () => {
     try {
-      const amount = Math.round(calculateTotal(true) * 100); // final price in pence
-  
-      // ✅ Set checkout flag before leaving
-      sessionStorage.setItem('checkoutInProgress', 'true');
-  
-      const response = await fetch('https://coco-bubble-tea-backend.onrender.com/create-checkout-session', {
+      // Sanitize and validate cartItems
+      const sanitizedCartItems = cartItems
+        .map(item => ({
+          id: item.id,
+          name: item.name || 'Unknown Item',
+          size: item.size || 'reg',
+          price: Number(item.price) || 0,
+          quantity: parseInt(item.quantity, 10) || 1,
+        }))
+        .filter(item => item.price > 0 && item.quantity > 0);
+
+      if (sanitizedCartItems.length === 0) {
+        throw new Error('No valid items in cart');
+      }
+
+      // Use environment variable or fallback to local URL
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+      const apiEndpoint = `${backendUrl}/create-checkout-session`;
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ cartItems: sanitizedCartItems, totalAmount: calculateTotal(true) }),
       });
-  
+
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }
-  
+
       const data = await response.json();
-  
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert('Checkout failed: No URL returned.');
+      console.log('Session ID received:', data.id);
+
+      if (!data.id) {
+        throw new Error('No valid session ID returned');
+      }
+
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error('Stripe failed to initialize');
+      }
+
+      const { error } = await stripe.redirectToCheckout({ sessionId: data.id });
+      if (error) {
+        console.error('Redirect error:', error.message);
+        throw new Error('Failed to redirect to Checkout: ' + error.message);
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('An error occurred while processing your checkout.');
+      alert('An error occurred while processing your checkout: ' + error.message);
     }
   };
-  
 
   return (
     <div className="flex flex-col md:flex-row gap-8 p-8 pt-24 min-h-screen bg-white relative">
