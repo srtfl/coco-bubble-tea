@@ -7,7 +7,7 @@ import { loadStripe } from '@stripe/stripe-js';
 // Log the Stripe key for debugging
 console.log('Stripe Publishable Key:', process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
-// Initialize Stripe with a fallback
+// Initialize Stripe
 const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 if (!stripeKey) {
   throw new Error('Stripe publishable key is not defined. Please set REACT_APP_STRIPE_PUBLISHABLE_KEY in your .env file.');
@@ -50,6 +50,7 @@ function OrderOnlineSection() {
       // Use environment variable or fallback to local URL
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       const apiEndpoint = `${backendUrl}/create-checkout-session`;
+      console.log('Using backend URL:', backendUrl); // Debug log to verify URL
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
