@@ -2,17 +2,9 @@ import React, { useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
-import { loadStripe } from '@stripe/stripe-js';
 
 // Log the Stripe key for debugging
 console.log('Stripe Publishable Key:', process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
-
-// Initialize Stripe
-const stripeKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
-if (!stripeKey) {
-  throw new Error('Stripe publishable key is not defined. Please set REACT_APP_STRIPE_PUBLISHABLE_KEY in your .env file.');
-}
-const stripePromise = loadStripe(stripeKey);
 
 function OrderOnlineSection() {
   const {
@@ -32,7 +24,6 @@ function OrderOnlineSection() {
 
   const handleCheckout = async () => {
     try {
-      // Sanitize and validate cartItems
       const sanitizedCartItems = cartItems
         .map(item => ({
           id: item.id,
@@ -47,15 +38,17 @@ function OrderOnlineSection() {
         throw new Error('No valid items in cart');
       }
 
-      // Use environment variable or fallback to local URL
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       const apiEndpoint = `${backendUrl}/create-checkout-session`;
-      console.log('Using backend URL:', backendUrl); // Debug log to verify URL
+      console.log('Using backend URL:', backendUrl);
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cartItems: sanitizedCartItems, totalAmount: calculateTotal(true) }),
+        body: JSON.stringify({
+          cartItems: sanitizedCartItems,
+          totalAmount: calculateTotal(true),
+        }),
       });
 
       if (!response.ok) {
@@ -63,22 +56,14 @@ function OrderOnlineSection() {
       }
 
       const data = await response.json();
-      console.log('Session ID received:', data.id);
+      console.log('Stripe session URL received:', data.url);
 
-      if (!data.id) {
-        throw new Error('No valid session ID returned');
+      if (!data.url) {
+        throw new Error('Stripe session URL not returned');
       }
 
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Stripe failed to initialize');
-      }
-
-      const { error } = await stripe.redirectToCheckout({ sessionId: data.id });
-      if (error) {
-        console.error('Redirect error:', error.message);
-        throw new Error('Failed to redirect to Checkout: ' + error.message);
-      }
+      // ✅ Redirect the user to the Stripe-hosted checkout page
+      window.location.href = data.url;
     } catch (error) {
       console.error('Checkout error:', error);
       alert('An error occurred while processing your checkout: ' + error.message);
