@@ -11,14 +11,13 @@ import { getCategories } from '../services/firebaseService';
 // Initialize Stripe with your test publishable key
 const stripePromise = loadStripe('pk_test_51RJdtSFZmDqqR2xX7akXUxT2lS7ySehkgy9zc79wXAs84sQbHX0q3kzAXkUqBqhbuh8FwnEbLWIG18K1FnXpKvGq00alUzv5o2');
 
-// Use the same base64 placeholder image as in AdminPanel.jsx
 const placeholderImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAB0SURBVHhe3c0BDQAAAMKg9U9tCy8aAADgT+2BAACgABAAAgAAIAABAAAgAAQAASAABAAAgAAIAAAgAAQAASAABAAAgAAIAAAgAAQAASAABAAAgAAIAAAgAAQAASAABAAAgAAIAACAQ78BASm1PbgAAAAASUVORK5CYII=';
 
 function CheckoutForm({ totalAmount, cartItems, onSuccess, onCancel, onClose }) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
-  const { clearCart } = useCart(); // Import clearCart to use after successful payment
+  const { clearCart } = useCart();
   const [error, setError] = useState(null);
   const [cancelled, setCancelled] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -38,8 +37,12 @@ function CheckoutForm({ totalAmount, cartItems, onSuccess, onCancel, onClose }) 
       return;
     }
 
+    // Use environment variable or fallback to local URL
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+    const apiEndpoint = `${backendUrl}/api/create-payment-intent`;
+
     try {
-      const response = await fetch('/api/create-payment-intent', {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: totalAmount, metadata: { cartItems: JSON.stringify(cartItems) } }),
@@ -77,7 +80,7 @@ function CheckoutForm({ totalAmount, cartItems, onSuccess, onCancel, onClose }) 
         setSuccess(true);
         setPaymentId(result.paymentIntent.id);
         setProcessing(false);
-        clearCart(); // Clear the cart only on successful payment
+        clearCart();
         onSuccess(result.paymentIntent);
       }
     } catch (err) {
@@ -185,7 +188,7 @@ function MenuSection() {
   const [modalProduct, setModalProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState('reg');
   const [quantity, setQuantity] = useState(1);
-  const [selectedItems, setSelectedItems] = useState({}); // Stores arrays per product
+  const [selectedItems, setSelectedItems] = useState({});
   const [showCheckout, setShowCheckout] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoryError, setCategoryError] = useState(null);
@@ -194,7 +197,6 @@ function MenuSection() {
   const { cartItems, addToCart, removeFromCart } = useCart();
   const navigate = useNavigate();
 
-  // Sync selectedItems with cartItems whenever cartItems changes
   useEffect(() => {
     const syncSelectedItemsWithCart = () => {
       const newSelectedItems = {};
@@ -302,7 +304,7 @@ function MenuSection() {
   };
 
   const handleResetSelections = (productId) => {
-    removeFromCart({ id: productId }); // Remove all items with this product id
+    removeFromCart({ id: productId });
     setSelectedItems((prev) => {
       const newSelectedItems = { ...prev };
       delete newSelectedItems[productId];
