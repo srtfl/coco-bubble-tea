@@ -13,6 +13,7 @@ import ProductForm from './ProductForm';
 import PromotionForm from './PromotionForm';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { useNavigate } from 'react-router-dom'; // Add this import
 
 // Initialize Stripe with your test publishable key
 const stripePromise = loadStripe('pk_test_51xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
@@ -158,7 +159,8 @@ function AdminPanel() {
   const [showTestPayment, setShowTestPayment] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoryError, setCategoryError] = useState(null);
-  const [failedImages, setFailedImages] = useState(new Set()); // Track failed image URLs
+  const [failedImages, setFailedImages] = useState(new Set());
+  const navigate = useNavigate(); // Add useNavigate hook
 
   useEffect(() => {
     const fetchData = async () => {
@@ -226,7 +228,7 @@ function AdminPanel() {
   const handleImageError = (imageUrl, e) => {
     if (!failedImages.has(imageUrl)) {
       setFailedImages(prev => new Set(prev).add(imageUrl));
-      e.target.src = placeholderImage; // Use base64 placeholder image
+      e.target.src = placeholderImage;
     }
   };
 
@@ -240,12 +242,33 @@ function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-white text-black p-8 pt-20">
-      <div className="flex justify-end mb-6">
+      <div className="flex justify-end mb-6 space-x-4">
         <button
           onClick={() => setShowTestPayment(true)}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Test Payment
+        </button>
+        <button
+        onClick={() => {
+          console.log('View & Manage Orders clicked, navigating to /orders');
+          navigate('/orders');
+        }}
+          
+          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+        >
+          View & Manage Orders
+        </button>
+
+        {/* Temporary test button */}
+        <button
+          onClick={() => {
+            console.log('Test button clicked, navigating to /menu');
+            navigate('/menu');
+          }}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Test Navigate to Menu
         </button>
       </div>
 

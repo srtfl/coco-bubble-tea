@@ -41,6 +41,7 @@ function OrderOnlineSection() {
       const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
       const apiEndpoint = `${backendUrl}/create-checkout-session`;
       console.log('Using backend URL:', backendUrl);
+      console.log('Sending cartItems to backend:', sanitizedCartItems);
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -62,7 +63,7 @@ function OrderOnlineSection() {
         throw new Error('Stripe session URL not returned');
       }
 
-      // ✅ Redirect the user to the Stripe-hosted checkout page
+      // Redirect to Stripe-hosted checkout page
       window.location.href = data.url;
     } catch (error) {
       console.error('Checkout error:', error);
