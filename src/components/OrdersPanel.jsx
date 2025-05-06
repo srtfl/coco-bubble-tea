@@ -9,21 +9,21 @@ function OrdersPanel() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true); // To show loading state
-  const [error, setError] = useState(null); // To capture any errors
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Check authentication and admin status
+  const [sortOption, setSortOption] = useState('newest');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
   useEffect(() => {
     if (!user) {
-      console.log('User not logged in, redirecting to login...');
       navigate('/login');
     } else if (!isAdmin) {
-      console.log('User is not admin, redirecting to home...');
       navigate('/');
     }
   }, [user, isAdmin, navigate]);
 
-  // Fetch orders from Firestore
   useEffect(() => {
     if (!user || !isAdmin) return;
 
@@ -35,14 +35,11 @@ function OrdersPanel() {
           id: doc.id,
           ...doc.data(),
         }));
-
-        console.log('Fetched orders from Firestore:', fetchedOrders); // Log fetched orders for debugging
-
         setOrders(fetchedOrders);
-        setLoading(false); // Set loading to false after data is fetched
+        setLoading(false);
       },
       (err) => {
-        console.error('Error fetching orders:', err); // Capture any errors
+        console.error('Error fetching orders:', err);
         setError('Error fetching orders. Please try again later.');
         setLoading(false);
       }
@@ -50,6 +47,46 @@ function OrdersPanel() {
 
     return () => unsubscribe();
   }, [user, isAdmin]);
+
+  const sortOrders = (orders) => {
+    const sorted = [...orders];
+    switch (sortOption) {
+      case 'newest':
+        sorted.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
+        break;
+      case 'oldest':
+        sorted.sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
+        break;
+      case 'highest':
+        sorted.sort((a, b) => b.totalAmount - a.totalAmount);
+        break;
+      case 'lowest':
+        sorted.sort((a, b) => a.totalAmount - b.totalAmount);
+        break;
+      default:
+        break;
+    }
+    return sorted;
+  };
+
+  const filterOrders = (orders) => {
+    if (filterStatus === 'all') return orders;
+    return orders.filter((order) => order.status === filterStatus);
+  };
+
+  const searchOrders = (orders) => {
+    const term = searchTerm.toLowerCase();
+    return orders.filter((order) =>
+      (order.customer_email?.toLowerCase() || '').includes(term) ||
+      (order.customer_name?.toLowerCase() || '').includes(term)
+    );
+  };
+
+  const processedOrders = sortOrders(
+    searchOrders(
+      filterOrders(orders)
+    )
+  );
 
   if (loading) {
     return (
@@ -71,11 +108,54 @@ function OrdersPanel() {
     <div className="p-8 pt-24 bg-white min-h-screen">
       <h1 className="text-4xl font-bold mb-8 text-black">Orders Dashboard</h1>
 
-      {orders.length === 0 ? (
+      {/* Controls */}
+      <div className="flex flex-wrap gap-4 mb-6 items-center">
+        {/* Sort Dropdown */}
+        <div>
+          <label className="text-gray-700 mr-2 font-medium">Sort by:</label>
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-1 text-black bg-white"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="highest">Highest Total</option>
+            <option value="lowest">Lowest Total</option>
+          </select>
+        </div>
+
+        {/* Filter Dropdown */}
+        <div>
+          <label className="text-gray-700 mr-2 font-medium">Filter:</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-1 text-black bg-white"
+          >
+            <option value="all">All</option>
+            <option value="paid">Paid</option>
+            <option value="refunded">Refunded</option>
+          </select>
+        </div>
+
+        {/* Search Input */}
+        <div>
+          <input
+            type="text"
+            placeholder="Search by email or name"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-1 w-64 text-black bg-white"
+          />
+        </div>
+      </div>
+
+      {processedOrders.length === 0 ? (
         <p className="text-gray-700">No orders found.</p>
       ) : (
         <div className="space-y-6">
-          {orders.map((order) => (
+          {processedOrders.map((order) => (
             <OrderCard key={order.id} order={order} />
           ))}
         </div>

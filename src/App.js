@@ -20,6 +20,9 @@ import OrdersPanel from './components/OrdersPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import FloatingOrderButton from './components/FloatingOrderButton';
 import Footer from './components/Footer';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import RequestMyData from './components/RequestMyData';
+import GDPRPopup from './components/GDPRPopup'; // ✅ Proper import
 
 // Auth context
 export const AuthContext = createContext();
@@ -44,7 +47,7 @@ function App() {
 
   return (
     <AuthContext.Provider value={{ user, isAdmin }}>
-      <CartProvider> {/* ✅ Wrap the app with CartProvider */}
+      <CartProvider>
         <div className="font-inter font-sans bg-gray-900 text-white min-h-screen flex flex-col">
           <Header />
           <ScrollToTop />
@@ -58,6 +61,8 @@ function App() {
               <Route path="/contact" element={<ContactSection />} />
               <Route path="/success" element={<SuccessPage />} />
               <Route path="/cancel" element={<CancelPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/request-my-data" element={<RequestMyData />} />
 
               {/* Authentication Pages */}
               <Route path="/login" element={<Login />} />
@@ -82,6 +87,13 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
+
+          {/* ✅ GDPR Popup inserted before Footer */}
+          <GDPRPopup
+            onAccept={() => console.log('Accepted cookies')}
+            onReject={() => console.log('Rejected cookies')}
+          />
+
           <FloatingOrderButton />
           <Footer />
         </div>
