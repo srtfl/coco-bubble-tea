@@ -16,12 +16,14 @@ function OrderOnlineSection() {
 
   const navigate = useNavigate();
   const [backendTotal, setBackendTotal] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const handleCheckout = async () => {
+    setIsLoading(true);
     try {
       const sanitizedCartItems = cartItems
         .map(item => ({
@@ -64,6 +66,7 @@ function OrderOnlineSection() {
       // Redirect to Stripe-hosted checkout page
       window.location.href = data.url;
     } catch (error) {
+      setIsLoading(false);
       console.error('Checkout error:', error);
       alert('An error occurred while processing your checkout: ' + error.message);
     }
@@ -177,8 +180,9 @@ function OrderOnlineSection() {
             <button
               onClick={handleCheckout}
               className="bg-coco-yellow hover:bg-coco-orange text-black font-bold py-3 px-6 rounded-full"
+              disabled={isLoading}
             >
-              Place Order
+              {isLoading ? "Processing..." : "Place Order"}
             </button>
           )}
         </div>
