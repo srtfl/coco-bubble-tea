@@ -1,10 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 
-// Log the Stripe key for debugging
-console.log('Stripe Publishable Key:', process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 function OrderOnlineSection() {
   const {
@@ -17,6 +15,7 @@ function OrderOnlineSection() {
   } = useCart();
 
   const navigate = useNavigate();
+  const [backendTotal, setBackendTotal] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -48,7 +47,6 @@ function OrderOnlineSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cartItems: sanitizedCartItems,
-          totalAmount: calculateTotal(true),
         }),
       });
 
@@ -57,7 +55,7 @@ function OrderOnlineSection() {
       }
 
       const data = await response.json();
-      console.log('Stripe session URL received:', data.url);
+      setBackendTotal(data.total); // Save backend total for display
 
       if (!data.url) {
         throw new Error('Stripe session URL not returned');
@@ -161,7 +159,9 @@ function OrderOnlineSection() {
           )}
           <div className="flex justify-between font-bold text-xl border-t border-gray-300 pt-4 text-black">
             <span>Total:</span>
-            <span>£{calculateTotal(true).toFixed(2)}</span>
+            <span>
+              £{backendTotal !== null ? Number(backendTotal).toFixed(2) : calculateTotal(true).toFixed(2)}
+            </span>
           </div>
         </div>
 
